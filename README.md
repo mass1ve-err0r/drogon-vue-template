@@ -21,13 +21,16 @@ docker compose up -d
 ## Build Instructions
 If you want to build the project manually without Docker, follow these steps:
 
-1. **Install Drogon and Dependencies**
+1. **Install Drogon**
     - Follow the official Drogon **installation guide** :   
       [Drogon Installation](https://github.com/drogonframework/drogon/wiki/ENG-02-Installation)
-    - Ensure you have **CMake, g++ (C+++ 20), and Drogon's dependencies** installed.
 
 
-2. **Clone the Repository & Build**
+2. **Install Node + npm**
+   - Follow the instructions at [nodejs](https://nodejs.org/en/download)
+
+
+3. **Clone the Repository & Build**
 ```sh
 git clone https://github.com/mass1ve-err0r/drogon-vue-template <your-project-folder>
 cd <your-project-folder>
@@ -37,7 +40,7 @@ make -j$(nproc)
 
 ```
 
-3. **Run the Application**
+4. **Run the Application**
 ```sh
 ./dv3
 ``` 
