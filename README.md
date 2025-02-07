@@ -58,6 +58,10 @@ make -j$(nproc)
 ### Docker Integration
 
 
+### GitHub Workflows Integration
+Commits prefixed with `[REL]` will trigger the build & release workflow.
+It will automatically tag and build a release binary for you.
+
 ---
 
 ## License
