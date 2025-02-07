@@ -1,0 +1,93 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - master  # adjust if needed
+
+permissions:
+  contents: write
+
+jobs:
+  check-commit:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.run_build }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check commit message for [REL]
+        id: check
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=format:%s)
+          if [[ "$COMMIT_MSG" == "[REL]"* ]]; then
+            echo "run_build=true" >> $GITHUB_ENV
+            echo "::set-output name=run_build::true"
+          else
+            echo "run_build=false" >> $GITHUB_ENV
+            echo "::set-output name=run_build::false"
+          fi
+
+      - name: Debug Output
+        run: echo "Run build? ${{ steps.check.outputs.run_build }}"
+
+  build:
+    needs: check-commit
+    if: needs.check-commit.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (including g++-13)
+        run: |
+          sudo apt update
+          sudo apt install -y software-properties-common
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt update
+          sudo apt install -y g++-13 cmake git libjsoncpp-dev uuid-dev zlib1g-dev libssl-dev
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+          g++ --version  # Verify installation
+
+      - name: Install Drogon
+        run: |
+          git clone --branch v1.9.9 --depth 1 https://github.com/drogonframework/drogon.git
+          cd drogon
+          git submodule update --init
+          mkdir build && cd build
+          cmake .. -DCMAKE_CXX_STANDARD=20
+          make -j$(nproc)
+          sudo make install
+
+      - name: Get latest commit hash
+        id: vars
+        run: echo "GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Build the project with g++-13
+        run: |
+          mkdir -p build
+          cd build
+          cmake ..
+          make -j$(nproc)
+
+      - name: Package artifact
+        run: |
+          mkdir -p release
+          cp build/dv3 release/
+          tar -czf release.tar.gz -C release .
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: release-${{ env.GIT_HASH }}
+          name: Release ${{ env.GIT_HASH }}
+          body: "Automated release for commit ${{ env.GIT_HASH }}"
+          draft: false
+          prerelease: false
+          files: release.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
